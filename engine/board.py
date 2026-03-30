@@ -14,3 +14,7 @@ class Board():
             ['wR', 'wKN', 'wB', 'wQ', 'wK', 'wB', 'wKN', 'wR']   
         ]
         return board
+    
+    def print_board(self):
+        for row in self.board:
+            print(' '.join([str(piece) if piece else '  ' for piece in row]))

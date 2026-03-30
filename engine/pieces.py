@@ -9,7 +9,7 @@ class Piece:
         self.color = color
         self.position = position
 
-    def has_moved():
+    def has_moved(self):
         pass
 
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
@@ -17,13 +17,20 @@ class Piece:
 
 #All featues for the PAWN piece
 class Pawn(Piece):
+    def __init__(self, color, position):
+        super().__init__(color, position)
+        self.has_moved = False
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
-
+        moves = []
+        direction = 1 if self.color == 'w' else -1
         pass
 
 #All features for the KNIGHT piece
 class Knight(Piece):
+    def __init__(self, color, position):
+        super().__init__(color, position)
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
+        moves = []
         pass
 
 #All features for the BISHOP piece
