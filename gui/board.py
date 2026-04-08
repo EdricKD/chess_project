@@ -48,7 +48,7 @@ def main():
                     s_selected = (row, col)
                     p_clicks.append(s_selected)
                 if len(p_clicks) == 2: #Incase they want to make automatic moves
-                    move = board.Moves(p_clicks[0], p_clicks[1], gs.board)
+                    move = moves.Moves(p_clicks[0], p_clicks[1], gs.board)
                     print(move.get_notation())
                     gs.move(move)
                     s_selected = ()
