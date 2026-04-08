@@ -8,9 +8,10 @@ class Piece:
     def __init__(self, color: str, position: tuple[int, int]):
         self.color = color
         self.position = position
+        self.moved = False
 
     def has_moved(self):
-        pass
+        
 
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
         pass
@@ -23,7 +24,22 @@ class Pawn(Piece):
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
         moves = []
         direction = 1 if self.color == 'w' else -1
-        pass
+
+        one_ahead = (row + direction, col)
+        if board.is_in_bounds(one_ahead) and board.get_piece(one_ahead) is None:
+           moves.append(one_ahead) 
+
+           two_ahead = (row + direction*2, col)
+           if not self.moved and board.is_in_bounds(two_ahead) and board.get_piece(two_ahead) is None:
+               moves.append(two_ahead)
+            
+        for diagonal_capture in [-1,1]:
+            capture_square = (row + direction, col + diagonal_capture)
+            if board.is_in_bounds(capture_square):
+                target = board.get_piece(capture_square)
+                if target is not None and target.color != self.color:
+                        moves.append(capture_square)
+        
 
 #All features for the KNIGHT piece
 class Knight(Piece):
