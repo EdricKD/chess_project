@@ -47,10 +47,20 @@ def main():
                 else:
                     s_selected = (row, col)
                     p_clicks.append(s_selected)
-                if len(p_clicks) == 2: #Incase they want to make automatic moves
-                    move = moves.Moves(p_clicks[0], p_clicks[1], gs.board)
-                    print(move.get_notation())
-                    gs.move(move)
+                if len(p_clicks) == 2:
+                    piece = gs.board[p_clicks[0][0]][p_clicks[0][1]]
+                    
+                    # Check it's the right player's turn
+                    if piece is not None and ((gs.wtomove and piece.color == 'w') or (not gs.wtomove and piece.color == 'b')):
+                        valid_moves = piece.get_valid_moves(gs)
+                        destination = p_clicks[1]
+                        
+                        if destination in valid_moves:
+                            move = moves.Moves(p_clicks[0], p_clicks[1], gs.board)
+                            gs.move(move)
+                            piece.moved = True
+                            piece.position = destination
+                    
                     s_selected = ()
                     p_clicks = []
         VisualGameState(screen, gs)
@@ -72,8 +82,9 @@ def VisualPieces(screen, board):
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             piece = board[r][c]
-            if piece != None:
-                screen.blit(IMAGES[piece], py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
+            if piece is not None:
+                key = piece.get_image_key()
+                screen.blit(IMAGES[key], py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
 
 if __name__ == "__main__":
     main()

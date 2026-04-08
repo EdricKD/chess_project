@@ -1,6 +1,3 @@
-from engine import board
-
-
 class Moves():
 
     # maps column index to file letter
@@ -22,13 +19,21 @@ class Moves():
         return self.col_to_file[col] + self.row_to_rank[row]
 
     def get_notation(self):
-        piece = self.pmove[1:]   # strips colour prefix e.g. 'wKN' -> 'KN'
+        from .pieces import Pawn, Knight, Bishop, Rook, Queen, King
+        
+        piece_map = {Pawn: 'P', Knight: 'KN', Bishop: 'B', 
+                    Rook: 'R', Queen: 'Q', King: 'K'}
+        
+        piece = piece_map[type(self.pmove)]  # gets piece type from the object
         capture = 'x' if self.pcapture else ''
         end_square = self.get_square(self.end_row, self.end_col)
 
         if piece == 'P':
-            return capture + end_square        # e.g. 'e4' or 'xd5'
+            if self.pcapture:
+                return self.col_to_file[self.start_col] + 'x' + end_square
+            else:
+                return end_square
         elif piece == 'KN':
-            return 'N' + capture + end_square  # e.g. 'Nf3' or 'Nxe5'
+            return 'N' + capture + end_square
         else:
-            return piece + capture + end_square # e.g. 'Be4', 'Qxd5'
+            return piece + capture + end_square
