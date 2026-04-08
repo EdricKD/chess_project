@@ -11,7 +11,7 @@ class Piece:
         self.moved = False
 
     def has_moved(self):
-        
+        pass
 
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
         pass
@@ -40,6 +40,7 @@ class Pawn(Piece):
                 if target is not None and target.color != self.color:
                         moves.append(capture_square)
         
+        return moves
 
 #All features for the KNIGHT piece
 class Knight(Piece):
@@ -47,12 +48,38 @@ class Knight(Piece):
         super().__init__(color, position)
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
         moves = []
-        pass
+        row, col = self.position
 
+        offsets = [(-2,-1), (-2, 1), (2, 1), (2, -1)
+                   (-1,-2), (-1,2), (1,2), (1,-2)]
+        
+        for direction_row, direction_column in offsets:
+            destination = (row + direction_row, col + direction_column)
+            if board.is_in_bounds(destination):
+                target = board.get_piece(destination)
+                if target is None or target.color != self.color:
+                    moves.append(target)
+
+        return moves
+    
 #All features for the BISHOP piece
 class Bishop(Piece):
+    def __init__(self,color,position):
+        super().__init__(color,position)
     def get_valid_moves(self, board: Board) -> list[tuple[int, int]]:
-        pass
+        moves = []
+        row, col = self.position
+
+        offsets = [(1,1), (1,-1), (-1,1), (-1,-1)]
+
+        for direction_row, direction_column in offsets:
+            destination = (row + direction_row, col + direction_column)
+            if board.is_in_bounds(destination):
+                target = board.get_piece(destination)
+                if target is None or target.color != self.color:
+                    moves.append(destination)
+        return moves
+
 
 #All features for the ROOK piece
 class Rook(Piece):
