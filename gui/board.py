@@ -6,7 +6,7 @@ import pygame as py
 
 from engine import board
 from engine import moves
-
+from engine import pieces
 
 py.init()
 WIDTH = HEIGHT = 512
