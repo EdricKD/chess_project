@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame as py 
 
 from engine import board
+from engine import moves
 
 
 py.init()
