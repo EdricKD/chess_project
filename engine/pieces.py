@@ -152,3 +152,4 @@ class King(Piece):
                 target = board.get_piece(destination)
                 if target is None or target.color != self.color:
                     moves.append(destination) 
+        return moves

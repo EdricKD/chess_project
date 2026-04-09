@@ -50,8 +50,10 @@ def main():
                 if len(p_clicks) == 2:
                     piece = gs.board[p_clicks[0][0]][p_clicks[0][1]]
                     
-                    # Check it's the right player's turn
-                    if piece is not None and ((gs.wtomove and piece.color == 'w') or (not gs.wtomove and piece.color == 'b')):
+                    if piece is None:  # first click was an empty square
+                        s_selected = ()
+                        p_clicks = []
+                    elif (gs.wtomove and piece.color == 'w') or (not gs.wtomove and piece.color == 'b'):
                         valid_moves = piece.get_valid_moves(gs)
                         destination = p_clicks[1]
                         
@@ -60,9 +62,12 @@ def main():
                             gs.move(move)
                             piece.moved = True
                             piece.position = destination
-                    
-                    s_selected = ()
-                    p_clicks = []
+                        
+                        s_selected = ()
+                        p_clicks = []
+                    else:
+                        s_selected = ()
+                        p_clicks = []
         VisualGameState(screen, gs)
         clock.tick(MAX_FPS)
         py.display.flip()
