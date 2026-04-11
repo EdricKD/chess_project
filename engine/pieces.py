@@ -14,6 +14,10 @@ class Piece:
     def get_valid_moves(self, board) -> list[tuple[int, int]]:
         pass
 
+    def get_attacks(self, board) -> list[tuple[int, int]]:
+        """Squares this piece attacks. Used for check detection."""
+        return self.get_valid_moves(board)
+
     def get_image_key(self):
         piece_map = {
             Pawn: 'P', Knight: 'KN', Bishop: 'B',
@@ -26,7 +30,7 @@ class Pawn(Piece):
     def get_valid_moves(self, board) -> list[tuple[int, int]]:
         moves = []
         row, col = self.position
-        direction = -1 if self.color == 'w' else 1  # fixed
+        direction = -1 if self.color == 'w' else 1
 
         one_ahead = (row + direction, col)
         if board.is_in_bounds(one_ahead) and board.get_piece(one_ahead) is None:
@@ -43,7 +47,24 @@ class Pawn(Piece):
                 if target is not None and target.color != self.color:
                     moves.append(capture_square)
 
+        # En passant
+        if board.en_passant_target is not None:
+            ep_row, ep_col = board.en_passant_target
+            if ep_row == row + direction and abs(ep_col - col) == 1:
+                moves.append(board.en_passant_target)
+
         return moves
+
+    def get_attacks(self, board) -> list[tuple[int, int]]:
+        """Pawns only attack diagonally, not forward."""
+        attacks = []
+        row, col = self.position
+        direction = -1 if self.color == 'w' else 1
+        for dc in [-1, 1]:
+            sq = (row + direction, col + dc)
+            if board.is_in_bounds(sq):
+                attacks.append(sq)
+        return attacks
     
 #All features for the KNIGHT piece
 class Knight(Piece):
@@ -170,4 +191,16 @@ class King(Piece):
                 board.get_piece((row, 2)) is None and 
                 board.get_piece((row, 3)) is None):
                 moves.append((row, 2))
+
         return moves
+
+    def get_attacks(self, board) -> list[tuple[int, int]]:
+        attacks = []
+        row, col = self.position
+        for dr, dc in [(1,0),(-1,0),(0,1),(0,-1),(1,1),(1,-1),(-1,1),(-1,-1)]:
+            dest = (row + dr, col + dc)
+            if board.is_in_bounds(dest):
+                target = board.get_piece(dest)
+                if target is None or target.color != self.color:
+                    attacks.append(dest)
+        return attacks

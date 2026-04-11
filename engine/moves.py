@@ -6,13 +6,16 @@ class Moves():
     row_to_rank = {0:'8', 1:'7', 2:'6', 3:'5', 4:'4', 5:'3', 6:'2', 7:'1'}
 
 
-    def __init__(self, start_s, end_s, board):
+    def __init__(self, start_s, end_s, board, en_passant_target=None):
         self.start_row = start_s[0]
         self.start_col = start_s[1]
         self.end_row = end_s[0]
         self.end_col = end_s[1]
         self.pmove = board[self.start_row][self.start_col]
         self.pcapture = board[self.end_row][self.end_col]
+        self.prev_en_passant_target = en_passant_target  # for undo
+        self.ep_captured_piece = None   # set by Board.move() if this was an EP capture
+        self.ep_captured_pos = None
         self.notation = self.get_notation()
 
     def get_square(self, row, col):
