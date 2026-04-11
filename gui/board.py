@@ -8,6 +8,7 @@ from engine import board
 from engine import moves
 from engine import pieces
 
+
 py.init()
 WIDTH = HEIGHT = 512
 DIMENSION = 8

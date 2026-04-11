@@ -27,6 +27,21 @@ class Board():
         self.mlog.append(move)
         self.wtomove = not self.wtomove
 
+        if isinstance(move.pmove, King):
+            # Kingside
+            if move.end_col - move.start_col == 2:
+                rook = self.board[move.end_row][7]
+                self.board[move.end_row][5] = rook
+                self.board[move.end_row][7] = None
+                rook.position = (move.end_row, 5)
+                rook.moved = True
+            # Queenside
+            elif move.end_col - move.start_col == -2:
+                rook = self.board[move.end_row][0]
+                self.board[move.end_row][3] = rook
+                self.board[move.end_row][0] = None
+                rook.position = (move.end_row, 3)
+                rook.moved = True
 
     def undo(self):
         if len(self.mlog) != 0:
