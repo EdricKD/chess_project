@@ -65,9 +65,11 @@ class Board():
             self.board[last_move.start_row][last_move.start_col] = last_move.pmove
             self.board[last_move.end_row][last_move.end_col] = last_move.pcapture
             self.en_passant_target = last_move.prev_en_passant_target
-            if last_move.ep_captured_pos is not None:
-                r, c = last_move.ep_captured_pos
-                self.board[r][c] = last_move.ep_captured_piece
+            self.wtomove = not self.wtomove
+
+            # restore piece state
+            last_move.pmove.position = (last_move.start_row, last_move.start_col)
+            last_move.pmove.moved = False
             
     def print_board(self):
         for row in self.board:

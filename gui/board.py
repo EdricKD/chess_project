@@ -38,6 +38,7 @@ def main():
         for e in py.event.get():
             if e.type == py.QUIT:
                 running = False
+            #mouse handler / presses
             elif e.type == py.MOUSEBUTTONDOWN:
                 location = py.mouse.get_pos()
                 col = location[0] // S_SIZE
@@ -70,9 +71,15 @@ def main():
 
                         s_selected = ()
                         p_clicks = []
+    
                     else:
                         s_selected = ()
                         p_clicks = []
+            #key handlers (keyboard)
+            elif e.type == py.KEYDOWN:
+                if e.key == py.K_z:
+                    gs.undo()
+
 
         VisualGameState(screen, gs, s_selected)
         if pending_promotion is not None:
