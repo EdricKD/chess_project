@@ -79,7 +79,6 @@ def main():
                         s_selected = ()
                         p_clicks = []
                     else:
-<<<<<<< HEAD
                         s_selected = (row, col)
                         p_clicks.append(s_selected)
                     if len(p_clicks) == 2:
@@ -109,14 +108,9 @@ def main():
                             s_selected = ()
                             p_clicks = []
 
-        VisualGameState(screen, gs)
+        VisualGameState(screen, gs, s_selected)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
-=======
-                        s_selected = ()
-                        p_clicks = []
-        VisualGameState(screen, gs, s_selected)
->>>>>>> 00b07bb5ab32b5f267cc4b33e792d17935705e9c
         clock.tick(MAX_FPS)
         py.display.flip()
 
