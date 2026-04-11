@@ -9,7 +9,6 @@ from engine import moves
 from engine import pieces
 
 
-py.init()
 WIDTH = HEIGHT = 512
 DIMENSION = 8
 S_SIZE = HEIGHT // DIMENSION
@@ -69,13 +68,24 @@ def main():
                     else:
                         s_selected = ()
                         p_clicks = []
-        VisualGameState(screen, gs)
+        VisualGameState(screen, gs, s_selected)
         clock.tick(MAX_FPS)
         py.display.flip()
 
-def VisualGameState(screen, gs):
+def VisualGameState(screen, gs, s_selected):
     VisualBoard(screen)
+    VisualHighlights(screen, gs, s_selected)  # after board, before pieces
     VisualPieces(screen, gs.board)
+
+def VisualHighlights(screen, gs, s_selected):
+    # highlight selected square in yellow
+    if s_selected != ():
+        row, col = s_selected
+        highlight = py.Surface((S_SIZE, S_SIZE))
+        highlight.set_alpha(100)
+        highlight.fill(py.Color("yellow"))
+        screen.blit(highlight, (col * S_SIZE, row * S_SIZE))
+
 
 def VisualBoard(screen):
     colors = [py.Color("white"), py.Color("light blue")]
