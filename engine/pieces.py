@@ -152,4 +152,22 @@ class King(Piece):
                 target = board.get_piece(destination)
                 if target is None or target.color != self.color:
                     moves.append(destination) 
+        # Castling logic
+        if not self.moved:
+            # Kingside castling
+            if (board.get_piece((row, 7)) is not None and 
+                isinstance(board.get_piece((row, 7)), Rook) and 
+                not board.get_piece((row, 7)).moved and 
+                board.get_piece((row, 5)) is None and 
+                board.get_piece((row, 6)) is None):
+                moves.append((row, 6))
+
+            # Queenside castling
+            if (board.get_piece((row, 0)) is not None and 
+                isinstance(board.get_piece((row, 0)), Rook) and 
+                not board.get_piece((row, 0)).moved and 
+                board.get_piece((row, 1)) is None and 
+                board.get_piece((row, 2)) is None and 
+                board.get_piece((row, 3)) is None):
+                moves.append((row, 2))
         return moves
