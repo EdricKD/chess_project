@@ -6,6 +6,7 @@ class Board():
         self.wtomove = True
         self.mlog = []
         self.en_passant_target = None  # square a pawn can capture to via en passant
+        self.score = {'w': 0, 'b': 0, 'draws': 0} #Keeps track of each color's win rate
 
     def create_board(self):
         board = [[None]*8 for _ in range(8)]
@@ -148,5 +149,50 @@ class Board():
             self.board[ep_square[0]][ep_square[1]] = ep_piece
         return in_check
     
+    #This class is for a special type of chess called freestyle chess
+    #It allows for the creation of a randomised back rank
+    def __init__(self, freestyle=False, score=None):
+        self.board = self.create_freestyle_board() if freestyle else self.create_board()
+        self.wtomove = True
+        self.mlog = []
+        self.en_passant_target = None
+        self.score = score if score else {'w': 0, 'b': 0, 'draws': 0}
+    
+    #This is the freestyle method itself
+    def create_freestyle_board(self):
+        #Random allows for the sorting of pieces
+        import random
+        board = [[None]*8 for _ in range(8)]
+        
+        all_pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook,
+                    Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn]
+        
+        # valid rows for pawns — not rank 0 or 7
+        pawn_squares = [(r, c) for r in range(1, 7) for c in range(8)]
+        other_squares = [(r, c) for r in range(8) for c in range(8)]
+        
+        for color in ['w', 'b']:
+            random.shuffle(pawn_squares)
+            random.shuffle(other_squares)
+            
+            pawn_pool = list(pawn_squares)
+            other_pool = [sq for sq in other_squares if sq not in pawn_pool[:8]]
+            
+            placed = 0
+            pawn_count = 0
+            for PieceClass in all_pieces:
+                if PieceClass == Pawn:
+                    pos = pawn_pool[pawn_count]
+                    pawn_count += 1
+                else:
+                    pos = other_pool[placed]
+                    placed += 1
+                while board[pos[0]][pos[1]] is not None:
+                    placed += 1
+                    pos = other_pool[placed]
+                board[pos[0]][pos[1]] = PieceClass(color, pos)
+        
+        return board
+        
 
 

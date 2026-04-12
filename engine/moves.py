@@ -41,9 +41,3 @@ class Moves():
         else:
             return piece + capture + end_square
         
-    def undoMove(self):
-        if len(self.moveLog) != 0: #Makes sure there is no move to undo
-            move = self.moveLog.pop()
-            self.board[move.start_row][move.start_col] = move.pmove
-            self.board[move.end_row][move.end_cow] = move.pcapture
-            self.wtomove = not self.wtomove #switch turns back
