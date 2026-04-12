@@ -1,7 +1,17 @@
 from .pieces import Pawn, Knight, Bishop, Rook, Queen, King
 
 class Board():
+    def __init__(self, freestyle=False, score=None):
+        """Initialise a new game. Set freestyle=True for randomised back ranks.
+        Pass an existing score dict to carry scores across games."""
+        self.board = self.create_freestyle_board() if freestyle else self.create_board()
+        self.wtomove = True
+        self.mlog = []
+        self.en_passant_target = None
+        self.score = score if score else {'w': 0, 'b': 0, 'draws': 0}
+
     def create_board(self):
+        """Return an 8x8 list representing the standard starting position."""
         board = [[None]*8 for _ in range(8)]
 
         for col in range(8):
@@ -16,7 +26,35 @@ class Board():
 
         return board
 
+    def create_freestyle_board(self):
+        """Return an 8x8 list with pawns in standard positions but both
+        back ranks randomly shuffled (Fischer Random / Chess960 style)."""
+        import random
+        board = [[None]*8 for _ in range(8)]
+
+        # Pawns stay exactly where they are
+        for col in range(8):
+            board[1][col] = Pawn('b', (1, col))
+            board[6][col] = Pawn('w', (6, col))
+
+        # Shuffle back rank pieces independently for each color
+        back_row = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+
+        white_back = back_row.copy()
+        random.shuffle(white_back)
+        for col, PieceClass in enumerate(white_back):
+            board[7][col] = PieceClass('w', (7, col))
+
+        black_back = back_row.copy()
+        random.shuffle(black_back)
+        for col, PieceClass in enumerate(black_back):
+            board[0][col] = PieceClass('b', (0, col))
+
+        return board
+
     def move(self, move):
+        """Apply a Move to the board: update piece positions, switch turn,
+        handle en passant target setting/capture, and move castling rooks."""
         self.board[move.start_row][move.start_col] = None
         self.board[move.end_row][move.end_col] = move.pmove
         self.mlog.append(move)
@@ -54,6 +92,8 @@ class Board():
                 rook.moved = True
 
     def undo(self):
+        """Revert the last move: restore pieces, en passant state, turn,
+        and undo castling rook movement and en passant captures."""
         if len(self.mlog) != 0:
             last_move = self.mlog.pop()
             self.board[last_move.start_row][last_move.start_col] = last_move.pmove
@@ -61,17 +101,17 @@ class Board():
             self.en_passant_target = last_move.prev_en_passant_target
             self.wtomove = not self.wtomove
 
-            # restore piece position
+            # Restore piece position
             last_move.pmove.position = (last_move.start_row, last_move.start_col)
             last_move.pmove.moved = False
 
-            # restore en passant captured pawn
+            # Restore en passant captured pawn
             if last_move.ep_captured_pos is not None:
                 r, c = last_move.ep_captured_pos
                 self.board[r][c] = last_move.ep_captured_piece
                 last_move.ep_captured_piece.position = (r, c)
 
-            # restore castling rook
+            # Restore castling rook
             if isinstance(last_move.pmove, King):
                 col_diff = last_move.end_col - last_move.start_col
                 row = last_move.start_row
@@ -87,20 +127,24 @@ class Board():
                     self.board[row][3] = None
                     rook.position = (row, 0)
                     rook.moved = False
-            
+
     def print_board(self):
+        """Print a text representation of the board to stdout (debug helper)."""
         for row in self.board:
             print(' '.join([piece.get_image_key().center(4) if piece else ' .  ' for piece in row]))
 
     def is_in_bounds(self, position: tuple[int, int]) -> bool:
+        """Return True if (row, col) is within the 8x8 board."""
         row, col = position
         return 0 <= row <= 7 and 0 <= col <= 7
 
     def get_piece(self, position: tuple[int, int]):
+        """Return the piece at (row, col), or None if the square is empty."""
         row, col = position
         return self.board[row][col]
 
     def is_square_attacked(self, square, attacker_color) -> bool:
+        """Return True if any piece of attacker_color can attack the given square."""
         for r in range(8):
             for c in range(8):
                 piece = self.board[r][c]
@@ -110,6 +154,7 @@ class Board():
         return False
 
     def is_in_check(self, color) -> bool:
+        """Return True if the king of the given color is currently in check."""
         opponent = 'b' if color == 'w' else 'w'
         for r in range(8):
             for c in range(8):
@@ -119,6 +164,9 @@ class Board():
         return False
 
     def get_legal_moves(self, piece) -> list[tuple[int, int]]:
+        """Return all fully legal destination squares for piece.
+        Filters pseudo-legal moves by simulating each and checking for self-check.
+        Also enforces castling rules (can't castle through or out of check)."""
         pseudo_moves = piece.get_valid_moves(self)
         legal = []
         opponent = 'b' if piece.color == 'w' else 'w'
@@ -138,6 +186,7 @@ class Board():
         return legal
 
     def has_any_legal_moves(self, color) -> bool:
+        """Return True if the given color has at least one legal move available."""
         for r in range(8):
             for c in range(8):
                 piece = self.board[r][c]
@@ -147,13 +196,16 @@ class Board():
         return False
 
     def is_checkmate(self, color) -> bool:
+        """Return True if the given color is in checkmate (in check with no legal moves)."""
         return self.is_in_check(color) and not self.has_any_legal_moves(color)
 
     def is_stalemate(self, color) -> bool:
+        """Return True if the given color is in stalemate (not in check, but no legal moves)."""
         return not self.is_in_check(color) and not self.has_any_legal_moves(color)
 
     def _leaves_king_in_check(self, piece, end) -> bool:
-        """Simulates moving piece to end, checks if own king is in check, then undoes."""
+        """Simulate moving piece to end, check if own king ends up in check, then undo.
+        Also handles the en passant edge case where a second pawn is removed."""
         start = piece.position
         captured = self.board[end[0]][end[1]]
 
@@ -179,40 +231,3 @@ class Board():
         if ep_square is not None:
             self.board[ep_square[0]][ep_square[1]] = ep_piece
         return in_check
-    
-    #This class is for a special type of chess called freestyle chess
-    #It allows for the creation of a randomised back rank
-    def __init__(self, freestyle=False, score=None):
-        self.board = self.create_freestyle_board() if freestyle else self.create_board()
-        self.wtomove = True
-        self.mlog = []
-        self.en_passant_target = None
-        self.score = score if score else {'w': 0, 'b': 0, 'draws': 0}
-    
-    #This is the freestyle method itself
-    def create_freestyle_board(self):
-        import random
-        board = [[None]*8 for _ in range(8)]
-
-        # pawns stay exactly where they are
-        for col in range(8):
-            board[1][col] = Pawn('b', (1, col))
-            board[6][col] = Pawn('w', (6, col))
-
-        # shuffle back rank pieces for both colors
-        back_row = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
-        
-        # white back rank
-        white_back = back_row.copy()
-        random.shuffle(white_back)
-        for col, PieceClass in enumerate(white_back):
-            board[7][col] = PieceClass('w', (7, col))
-
-        # black back rank
-        black_back = back_row.copy()
-        random.shuffle(black_back)
-        for col, PieceClass in enumerate(black_back):
-            board[0][col] = PieceClass('b', (0, col))
-
-        return board
-

@@ -18,6 +18,7 @@ IMAGES = {}
 
 
 def images():
+    """Load and scale all piece images into the IMAGES dict, keyed by e.g. 'wP', 'bKN'."""
     pieces = ["bP", "bR", "bKN", "bB", "bQ", "bK", "wP", "wR", "wKN", "wB", "wQ", "wK"]
     for p in pieces:
         path = os.path.join(os.path.dirname(__file__), "Images", p + ".png")
@@ -29,6 +30,8 @@ PROMO_KEYS = {'w': ['wQ', 'wR', 'wB', 'wKN'], 'b': ['bQ', 'bR', 'bB', 'bKN']}
 
 
 def draw_promotion_panel(screen, color):
+    """Draw the promotion choice panel (Queen, Rook, Bishop, Knight) at the
+    appropriate edge of the board for the promoting pawn's color."""
     panel_x = (WIDTH - 4 * S_SIZE) // 2
     panel_y = 0 if color == 'w' else HEIGHT - S_SIZE
     for i, key in enumerate(PROMO_KEYS[color]):
@@ -39,6 +42,8 @@ def draw_promotion_panel(screen, color):
 
 
 def get_promotion_choice(mouse_pos, color):
+    """Return the piece class the player chose from the promotion panel,
+    or None if the click did not land on a valid promotion square."""
     panel_x = (WIDTH - 4 * S_SIZE) // 2
     panel_y = 0 if color == 'w' else HEIGHT - S_SIZE
     x, y = mouse_pos
@@ -57,6 +62,8 @@ def b2s(r, c, flipped):
 
 
 def main():
+    """Entry point: initialise pygame, run the main game loop, and handle all
+    events (clicks, key presses, menu interactions, clock ticks)."""
     py.init()
     screen = py.display.set_mode((WIDTH + PANEL_WIDTH, HEIGHT))
     clock = py.time.Clock()
@@ -219,12 +226,16 @@ def main():
 
 
 def VisualGameState(screen, gs, s_selected, flipped):
+    """Render the full game state: board squares, highlights, and pieces."""
     VisualBoard(screen)
     VisualHighlights(screen, gs, s_selected, flipped)
     VisualPieces(screen, gs.board, flipped)
 
 
 def VisualHighlights(screen, gs, s_selected, flipped):
+    """Draw all square highlights: red for a king in check, green for the
+    selected piece, dots for empty legal-move squares, and red overlays for
+    capture squares."""
     # highlight king in check in red
     color = 'w' if gs.wtomove else 'b'
     if gs.is_in_check(color):
@@ -268,6 +279,7 @@ def VisualHighlights(screen, gs, s_selected, flipped):
 
 
 def VisualBoard(screen):
+    """Draw the 8x8 chequered board (white and light-blue squares)."""
     colors = [py.Color("white"), py.Color("light blue")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
@@ -276,6 +288,7 @@ def VisualBoard(screen):
 
 
 def VisualPieces(screen, board, flipped):
+    """Blit every piece image onto the board, respecting the flipped orientation."""
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             piece = board[r][c]
@@ -286,6 +299,8 @@ def VisualPieces(screen, board, flipped):
 
 
 def draw_game_over(screen, message):
+    """Render a semi-transparent overlay with the game-over result message
+    and a hint to start a new game or undo."""
     overlay = py.Surface((WIDTH, HEIGHT), py.SRCALPHA)
     overlay.fill((0, 0, 0, 140))
     screen.blit(overlay, (0, 0))
@@ -305,6 +320,9 @@ def draw_game_over(screen, message):
 
 
 def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time, black_time):
+    """Draw the right-hand side panel: always shows clocks; when the menu is
+    open also shows the score, game buttons, time controls, and resign flow.
+    Returns a list of (label, Rect) tuples for hit-testing in the event loop."""
     panel_rect = py.Rect(WIDTH, 0, PANEL_WIDTH, HEIGHT)
     py.draw.rect(screen, py.Color("gray20"), panel_rect)
     button_rects = []
