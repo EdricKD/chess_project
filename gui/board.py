@@ -74,6 +74,7 @@ def main():
     white_time = None
     black_time = None
     last_tick = None
+    game_over = None  # None, or a result string e.g. "White wins by checkmate!"
 
     while running:
         for e in py.event.get():
@@ -104,6 +105,7 @@ def main():
                                 s_selected = ()
                                 p_clicks = []
                                 pending_promotion = None
+                                game_over = None
                             elif label == "Freestyle":
                                 gs = board.Board(freestyle=True, score=gs.score)
                                 white_time = selected_time
@@ -111,6 +113,7 @@ def main():
                                 last_tick = py.time.get_ticks() if selected_time else None
                                 s_selected = ()
                                 p_clicks = []
+                                game_over = None
                             elif label in time_options:
                                 selected_time = time_options[label]
                             elif label == "Resign White":
@@ -127,12 +130,13 @@ def main():
                                 p_clicks = []
                                 pending_promotion = None
                                 pending_resign = None
+                                game_over = None
                                 menu_open = False
                             elif label == "Cancel":
                                 pending_resign = None
 
-                # Only handle board clicks when no promotion pending and menu is closed
-                elif not menu_open:
+                # Only handle board clicks when no promotion pending, menu closed, and game not over
+                elif not menu_open and game_over is None:
                     if not gs.wtomove:  # flip screen coords to board coords for black's turn
                         row, col = 7 - row, 7 - col
                     if s_selected == (row, col):
@@ -164,6 +168,16 @@ def main():
                                 if isinstance(piece, pieces.Pawn) and destination[0] == promo_row:
                                     pending_promotion = (destination[0], destination[1], piece.color)
 
+                                # Check for game end after the move
+                                current = 'w' if gs.wtomove else 'b'
+                                opponent_name = 'Black' if current == 'w' else 'White'
+                                if gs.is_checkmate(current):
+                                    game_over = f"{opponent_name} wins by checkmate!"
+                                    gs.score['b' if current == 'w' else 'w'] += 1
+                                elif gs.is_stalemate(current):
+                                    game_over = "Stalemate — draw!"
+                                    gs.score['draws'] += 1
+
                             s_selected = ()
                             p_clicks = []
                         else:
@@ -186,23 +200,19 @@ def main():
                 white_time = max(0, white_time - elapsed)
                 if white_time == 0:
                     gs.score['b'] += 1
-                    gs = board.Board(score=gs.score)
-                    white_time = selected_time
-                    black_time = selected_time
-                    last_tick = py.time.get_ticks() if selected_time else None
+                    game_over = "Black wins on time!"
             else:
                 black_time = max(0, black_time - elapsed)
                 if black_time == 0:
                     gs.score['w'] += 1
-                    gs = board.Board(score=gs.score)
-                    white_time = selected_time
-                    black_time = selected_time
-                    last_tick = py.time.get_ticks() if selected_time else None
+                    game_over = "White wins on time!"
 
         flipped = not gs.wtomove
         VisualGameState(screen, gs, s_selected, flipped)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
+        if game_over is not None:
+            draw_game_over(screen, game_over)
         button_rects = draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time, black_time)
         clock.tick(MAX_FPS)
         py.display.flip()
@@ -273,6 +283,25 @@ def VisualPieces(screen, board, flipped):
                 key = piece.get_image_key()
                 sr, sc = b2s(r, c, flipped)
                 screen.blit(IMAGES[key], py.Rect(sc * S_SIZE, sr * S_SIZE, S_SIZE, S_SIZE))
+
+
+def draw_game_over(screen, message):
+    overlay = py.Surface((WIDTH, HEIGHT), py.SRCALPHA)
+    overlay.fill((0, 0, 0, 140))
+    screen.blit(overlay, (0, 0))
+
+    font = py.font.SysFont("monospace", 22, bold=True)
+    text = font.render(message, True, py.Color("white"))
+    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20))
+
+    bg = py.Rect(text_rect.left - 16, text_rect.top - 12, text_rect.width + 32, text_rect.height + 24)
+    py.draw.rect(screen, py.Color("gray20"), bg, border_radius=8)
+    py.draw.rect(screen, py.Color("gray60"), bg, 2, border_radius=8)
+    screen.blit(text, text_rect)
+
+    small = py.font.SysFont("monospace", 13)
+    hint = small.render("New Game from menu  |  Z to undo", True, py.Color("gray70"))
+    screen.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20)))
 
 
 def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time, black_time):

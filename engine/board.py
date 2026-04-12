@@ -137,6 +137,21 @@ class Board():
                 legal.append(end)
         return legal
 
+    def has_any_legal_moves(self, color) -> bool:
+        for r in range(8):
+            for c in range(8):
+                piece = self.board[r][c]
+                if piece is not None and piece.color == color:
+                    if len(self.get_legal_moves(piece)) > 0:
+                        return True
+        return False
+
+    def is_checkmate(self, color) -> bool:
+        return self.is_in_check(color) and not self.has_any_legal_moves(color)
+
+    def is_stalemate(self, color) -> bool:
+        return not self.is_in_check(color) and not self.has_any_legal_moves(color)
+
     def _leaves_king_in_check(self, piece, end) -> bool:
         """Simulates moving piece to end, checks if own king is in check, then undoes."""
         start = piece.position
