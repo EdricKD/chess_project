@@ -1,13 +1,6 @@
 from .pieces import Pawn, Knight, Bishop, Rook, Queen, King
 
 class Board():
-    def __init__(self):
-        self.board = self.create_board()
-        self.wtomove = True
-        self.mlog = []
-        self.en_passant_target = None  # square a pawn can capture to via en passant
-        self.score = {'w': 0, 'b': 0, 'draws': 0} #Keeps track of each color's win rate
-
     def create_board(self):
         board = [[None]*8 for _ in range(8)]
 
@@ -68,9 +61,32 @@ class Board():
             self.en_passant_target = last_move.prev_en_passant_target
             self.wtomove = not self.wtomove
 
-            # restore piece state
+            # restore piece position
             last_move.pmove.position = (last_move.start_row, last_move.start_col)
             last_move.pmove.moved = False
+
+            # restore en passant captured pawn
+            if last_move.ep_captured_pos is not None:
+                r, c = last_move.ep_captured_pos
+                self.board[r][c] = last_move.ep_captured_piece
+                last_move.ep_captured_piece.position = (r, c)
+
+            # restore castling rook
+            if isinstance(last_move.pmove, King):
+                col_diff = last_move.end_col - last_move.start_col
+                row = last_move.start_row
+                if col_diff == 2:  # kingside: rook moved from col 7 to col 5
+                    rook = self.board[row][5]
+                    self.board[row][7] = rook
+                    self.board[row][5] = None
+                    rook.position = (row, 7)
+                    rook.moved = False
+                elif col_diff == -2:  # queenside: rook moved from col 0 to col 3
+                    rook = self.board[row][3]
+                    self.board[row][0] = rook
+                    self.board[row][3] = None
+                    rook.position = (row, 0)
+                    rook.moved = False
             
     def print_board(self):
         for row in self.board:

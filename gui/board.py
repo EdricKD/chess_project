@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pygame as py 
+import pygame as py
 
 from engine import board
 from engine import moves
@@ -22,6 +22,38 @@ def images():
     for p in pieces:
         path = os.path.join(os.path.dirname(__file__), "Images", p + ".png")
         IMAGES[p] = py.transform.scale(py.image.load(path), (S_SIZE, S_SIZE))
+
+
+PROMO_PIECES = [pieces.Queen, pieces.Rook, pieces.Bishop, pieces.Knight]
+PROMO_KEYS = {'w': ['wQ', 'wR', 'wB', 'wKN'], 'b': ['bQ', 'bR', 'bB', 'bKN']}
+
+
+def draw_promotion_panel(screen, color):
+    panel_x = (WIDTH - 4 * S_SIZE) // 2
+    panel_y = 0 if color == 'w' else HEIGHT - S_SIZE
+    for i, key in enumerate(PROMO_KEYS[color]):
+        x = panel_x + i * S_SIZE
+        py.draw.rect(screen, py.Color("lightyellow"), py.Rect(x, panel_y, S_SIZE, S_SIZE))
+        py.draw.rect(screen, py.Color("darkgray"), py.Rect(x, panel_y, S_SIZE, S_SIZE), 2)
+        screen.blit(IMAGES[key], py.Rect(x, panel_y, S_SIZE, S_SIZE))
+
+
+def get_promotion_choice(mouse_pos, color):
+    panel_x = (WIDTH - 4 * S_SIZE) // 2
+    panel_y = 0 if color == 'w' else HEIGHT - S_SIZE
+    x, y = mouse_pos
+    if panel_y <= y < panel_y + S_SIZE:
+        idx = (x - panel_x) // S_SIZE
+        if 0 <= idx < 4:
+            return PROMO_PIECES[idx]
+    return None
+
+
+def b2s(r, c, flipped):
+    """Convert board coordinates to screen coordinates."""
+    if flipped:
+        return 7 - r, 7 - c
+    return r, c
 
 
 def main():
@@ -53,7 +85,15 @@ def main():
                 col = location[0] // S_SIZE
                 row = location[1] // S_SIZE
 
-                if menu_open and button_rects:
+                if pending_promotion is not None:
+                    # Promotion choice takes priority over everything else
+                    chosen = get_promotion_choice(location, pending_promotion[2])
+                    if chosen is not None:
+                        r, c, clr = pending_promotion
+                        gs.board[r][c] = chosen(clr, (r, c))
+                        pending_promotion = None
+
+                elif menu_open and button_rects:
                     for label, rect in button_rects:
                         if rect.collidepoint(location):
                             if label == "New Game":
@@ -91,7 +131,10 @@ def main():
                             elif label == "Cancel":
                                 pending_resign = None
 
+                # Only handle board clicks when no promotion pending and menu is closed
                 elif not menu_open:
+                    if not gs.wtomove:  # flip screen coords to board coords for black's turn
+                        row, col = 7 - row, 7 - col
                     if s_selected == (row, col):
                         s_selected = ()
                         p_clicks = []
@@ -115,7 +158,7 @@ def main():
                                 piece.moved = True
                                 piece.position = destination
                                 if last_tick is not None:
-                                    last_tick = py.time.get_ticks()  # switch clock on move
+                                    last_tick = py.time.get_ticks()
 
                                 promo_row = 0 if piece.color == 'w' else 7
                                 if isinstance(piece, pieces.Pawn) and destination[0] == promo_row:
@@ -142,7 +185,7 @@ def main():
             if gs.wtomove:
                 white_time = max(0, white_time - elapsed)
                 if white_time == 0:
-                    gs.score['draws'] += 1
+                    gs.score['b'] += 1
                     gs = board.Board(score=gs.score)
                     white_time = selected_time
                     black_time = selected_time
@@ -150,25 +193,28 @@ def main():
             else:
                 black_time = max(0, black_time - elapsed)
                 if black_time == 0:
-                    gs.score['draws'] += 1
+                    gs.score['w'] += 1
                     gs = board.Board(score=gs.score)
                     white_time = selected_time
                     black_time = selected_time
                     last_tick = py.time.get_ticks() if selected_time else None
 
-        VisualGameState(screen, gs, s_selected)
+        flipped = not gs.wtomove
+        VisualGameState(screen, gs, s_selected, flipped)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
         button_rects = draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time, black_time)
         clock.tick(MAX_FPS)
         py.display.flip()
 
-def VisualGameState(screen, gs, s_selected):
-    VisualBoard(screen)
-    VisualHighlights(screen, gs, s_selected)  # after board, before pieces
-    VisualPieces(screen, gs.board)
 
-def VisualHighlights(screen, gs, s_selected):
+def VisualGameState(screen, gs, s_selected, flipped):
+    VisualBoard(screen)
+    VisualHighlights(screen, gs, s_selected, flipped)
+    VisualPieces(screen, gs.board, flipped)
+
+
+def VisualHighlights(screen, gs, s_selected, flipped):
     # highlight king in check in red
     color = 'w' if gs.wtomove else 'b'
     if gs.is_in_check(color):
@@ -176,35 +222,58 @@ def VisualHighlights(screen, gs, s_selected):
             for c in range(DIMENSION):
                 piece = gs.board[r][c]
                 if piece is not None and isinstance(piece, pieces.King) and piece.color == color:
+                    sr, sc = b2s(r, c, flipped)
                     highlight = py.Surface((S_SIZE, S_SIZE))
                     highlight.set_alpha(180)
                     highlight.fill(py.Color("red"))
-                    screen.blit(highlight, (c * S_SIZE, r * S_SIZE))
-    
+                    screen.blit(highlight, (sc * S_SIZE, sr * S_SIZE))
 
-    # highlight selected square in yellow
     if s_selected != ():
         row, col = s_selected
+        piece = gs.board[row][col]
+
+        # highlight selected square in green
+        sr, sc = b2s(row, col, flipped)
         highlight = py.Surface((S_SIZE, S_SIZE))
         highlight.set_alpha(150)
         highlight.fill(py.Color("green"))
-        screen.blit(highlight, (col * S_SIZE, row * S_SIZE))
+        screen.blit(highlight, (sc * S_SIZE, sr * S_SIZE))
+
+        # highlight valid move squares
+        if piece is not None and ((gs.wtomove and piece.color == 'w') or (not gs.wtomove and piece.color == 'b')):
+            valid_moves = gs.get_legal_moves(piece)
+
+            dot_surf = py.Surface((S_SIZE, S_SIZE), py.SRCALPHA)
+            py.draw.circle(dot_surf, (0, 0, 0, 80), (S_SIZE // 2, S_SIZE // 2), S_SIZE // 6)
+
+            cap_surf = py.Surface((S_SIZE, S_SIZE), py.SRCALPHA)
+            cap_surf.fill((200, 0, 0, 100))
+
+            for move_row, move_col in valid_moves:
+                smr, smc = b2s(move_row, move_col, flipped)
+                if gs.board[move_row][move_col] is None:
+                    screen.blit(dot_surf, (smc * S_SIZE, smr * S_SIZE))
+                else:
+                    screen.blit(cap_surf, (smc * S_SIZE, smr * S_SIZE))
 
 
 def VisualBoard(screen):
     colors = [py.Color("white"), py.Color("light blue")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
-            color = colors[((r+c) % 2)]
-            py.draw.rect(screen, color, py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
+            color = colors[((r + c) % 2)]
+            py.draw.rect(screen, color, py.Rect(c * S_SIZE, r * S_SIZE, S_SIZE, S_SIZE))
 
-def VisualPieces(screen, board):
+
+def VisualPieces(screen, board, flipped):
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             piece = board[r][c]
             if piece is not None:
                 key = piece.get_image_key()
-                screen.blit(IMAGES[key], py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
+                sr, sc = b2s(r, c, flipped)
+                screen.blit(IMAGES[key], py.Rect(sc * S_SIZE, sr * S_SIZE, S_SIZE, S_SIZE))
+
 
 def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time, black_time):
     panel_rect = py.Rect(WIDTH, 0, PANEL_WIDTH, HEIGHT)
@@ -227,8 +296,7 @@ def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time,
 
     if not menu_open:
         font = py.font.SysFont("monospace", 12)
-        hint = font.render("ESC = menu", True, py.Color("gray60"))
-        screen.blit(hint, (WIDTH + 10, HEIGHT - 80))
+        screen.blit(font.render("ESC = menu", True, py.Color("gray60")), (WIDTH + 10, HEIGHT - 80))
         return button_rects
 
     font = py.font.SysFont("monospace", 15)
@@ -262,6 +330,7 @@ def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time,
         button_rects.append((label, rect))
 
     return button_rects
+
 
 if __name__ == "__main__":
     main()
