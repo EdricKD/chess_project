@@ -36,6 +36,8 @@ def main():
     s_selected =  () #Keep track of the last square selected
     p_clicks = [] #Keep track of player clicks
     menu_open = False
+    button_rects = []
+    
     while running:
         for e in py.event.get():
             if e.type == py.QUIT:
@@ -45,38 +47,57 @@ def main():
                 location = py.mouse.get_pos()
                 col = location[0] // S_SIZE
                 row = location[1] // S_SIZE
-                if s_selected == (row,col): #For if the user clicks the same square twice
-                    s_selected = () #Deselects the square
-                    p_clicks = []  #Clears the player clicks
-                else:
-                    s_selected = (row, col)
-                    p_clicks.append(s_selected)
-                if len(p_clicks) == 2:
-                    piece = gs.board[p_clicks[0][0]][p_clicks[0][1]]
 
-                    if piece is None:
-                        s_selected = ()
-                        p_clicks = []
-                    elif (gs.wtomove and piece.color == 'w') or (not gs.wtomove and piece.color == 'b'):
-                        valid_moves = gs.get_legal_moves(piece)
-                        destination = p_clicks[1]
+                if menu_open and button_rects:
+                    for label, rect in button_rects:
+                        if rect.collidepoint(location):
+                            if label == "New Game":
+                                gs = board.Board()
+                                s_selected = ()
+                                p_clicks = []
+                                pending_promotion = None
+                            elif label == "Freestyle":
+                                gs = board.Board(freestyle=True)
+                                s_selected = ()
+                                p_clicks = []
+                
 
-                        if destination in valid_moves:
-                            move = moves.Moves(p_clicks[0], p_clicks[1], gs.board, gs.en_passant_target)
-                            gs.move(move)
-                            piece.moved = True
-                            piece.position = destination
-
-                            promo_row = 0 if piece.color == 'w' else 7
-                            if isinstance(piece, pieces.Pawn) and destination[0] == promo_row:
-                                pending_promotion = (destination[0], destination[1], piece.color)
-
-                        s_selected = ()
-                        p_clicks = []
-    
+                #Only handles board clicks if the menu is closed
+                elif not menu_open:
+                    if s_selected == (row,col): #For if the user clicks the same square twice
+                        s_selected = () #Deselects the square
+                        p_clicks = []  #Clears the player clicks
                     else:
-                        s_selected = ()
-                        p_clicks = []
+                        s_selected = (row, col)
+                        p_clicks.append(s_selected)
+                    if len(p_clicks) == 2:
+                        piece = gs.board[p_clicks[0][0]][p_clicks[0][1]]
+
+                        if piece is None:
+                            s_selected = ()
+                            p_clicks = []
+                        elif (gs.wtomove and piece.color == 'w') or (not gs.wtomove and piece.color == 'b'):
+                            valid_moves = gs.get_legal_moves(piece)
+                            destination = p_clicks[1]
+
+                            if destination in valid_moves:
+                                move = moves.Moves(p_clicks[0], p_clicks[1], gs.board, gs.en_passant_target)
+                                gs.move(move)
+                                piece.moved = True
+                                piece.position = destination
+
+                                promo_row = 0 if piece.color == 'w' else 7
+                                if isinstance(piece, pieces.Pawn) and destination[0] == promo_row:
+                                    pending_promotion = (destination[0], destination[1], piece.color)
+
+                            s_selected = ()
+                            p_clicks = []
+        
+                        else:
+                            s_selected = ()
+                            p_clicks = []
+
+                
             #key handlers (keyboard)         
             elif e.type == py.KEYDOWN:
                 if e.key == py.K_z:
@@ -88,10 +109,10 @@ def main():
         VisualGameState(screen, gs, s_selected)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
+        button_rects = draw_panel(screen, gs, menu_open)
         clock.tick(MAX_FPS)
         py.display.flip()
         
-        button_rects = draw_panel(screen, gs, menu_open)
 
 def VisualGameState(screen, gs, s_selected):
     VisualBoard(screen)
