@@ -39,6 +39,7 @@ def main():
     button_rects = []
     selected_time = None
     time_options = {"3 min": 180, "5 min": 300, "10 min": 600, "Unlimited": None}
+    pending_resign = None
     
     while running:
         for e in py.event.get():
@@ -55,7 +56,6 @@ def main():
                         if rect.collidepoint(location):
                             if label == "New Game":
                                 gs = board.Board(score = gs.score)
-                                gs = board.Board()
                                 s_selected = ()
                                 p_clicks = []
                                 pending_promotion = None
@@ -65,7 +65,20 @@ def main():
                                 p_clicks = []
                             elif label in time_options:
                                 selected_time = time_options[label]
-                
+                            elif label == "Resign White":
+                                pending_resign = 'w'
+                            elif label == "Resign Black":
+                                pending_resign = 'b'
+                            elif label == "Confirm Resign" and pending_resign:
+                                gs.score['b' if pending_resign == 'w' else 'w'] += 1
+                                gs = board.Board(score=gs.score)
+                                s_selected = ()
+                                p_clicks = []
+                                pending_promotion = None
+                                pending_resign = None
+                                menu_open = False
+                            elif label == "Cancel":
+                                pending_resign = None
 
                 #Only handles board clicks if the menu is closed
                 elif not menu_open:
@@ -114,7 +127,7 @@ def main():
         VisualGameState(screen, gs, s_selected)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
-        button_rects = draw_panel(screen, gs, menu_open, selected_time)
+        button_rects = draw_panel(screen, gs, menu_open, selected_time, pending_resign)
         clock.tick(MAX_FPS)
         py.display.flip()
         
@@ -162,38 +175,50 @@ def VisualPieces(screen, board):
                 key = piece.get_image_key()
                 screen.blit(IMAGES[key], py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
 
-def draw_panel(screen, gs, menu_open, selected_time):
+def draw_panel(screen, gs, menu_open, selected_time, pending_resign):
     panel_rect = py.Rect(WIDTH, 0, PANEL_WIDTH, HEIGHT)
     py.draw.rect(screen, py.Color("gray20"), panel_rect)
+    button_rects = []
 
     if not menu_open:
-        # just show a small hint
         font = py.font.SysFont("monospace", 12)
         hint = font.render("ESC = menu", True, py.Color("gray60"))
         screen.blit(hint, (WIDTH + 10, HEIGHT - 20))
-        return
+        return button_rects
 
     font = py.font.SysFont("monospace", 15)
     title = font.render("MENU", True, py.Color("white"))
     screen.blit(title, (WIDTH + 70, 20))
 
-    # score display
     small = py.font.SysFont("monospace", 12)
-    screen.blit(small.render(f"W: {gs.score['w']}  B: {gs.score['b']}  D: {gs.score['draws']}", 
+    screen.blit(small.render(f"W: {gs.score['w']}  B: {gs.score['b']}  D: {gs.score['draws']}",
                 True, py.Color("gray70")), (WIDTH + 15, 35))
 
+    if pending_resign:
+        msg_font = py.font.SysFont("monospace", 13)
+        color_name = "White" if pending_resign == 'w' else "Black"
+        msg = msg_font.render(f"{color_name} resigns?", True, py.Color("white"))
+        screen.blit(msg, (WIDTH + 20, HEIGHT // 2 - 40))
+
+        for i, label in enumerate(["Confirm Resign", "Cancel"]):
+            rect = py.Rect(WIDTH + 20, HEIGHT // 2 + i * 55, 160, 40)
+            color = py.Color("firebrick") if label == "Confirm Resign" else py.Color("gray40")
+            py.draw.rect(screen, color, rect, border_radius=6)
+            text = font.render(label, True, py.Color("white"))
+            screen.blit(text, (rect.x + 10, rect.y + 10))
+            button_rects.append((label, rect))
+
+        return button_rects
+
+    # normal buttons
     time_options = {"3 min": 180, "5 min": 300, "10 min": 600, "Unlimited": None}
-    buttons = ["New Game", "Score", "3 min", "5 min", "10 min", "Unlimited", "Freestyle"]
-    button_rects = []
+    buttons = ["New Game", "Freestyle", "3 min", "5 min", "10 min", "Unlimited", "Resign White", "Resign Black"]
 
     for i, label in enumerate(buttons):
         rect = py.Rect(WIDTH + 20, 60 + i * 55, 160, 40)
-
-        #Highlights active time button
         is_active = (label in time_options and time_options[label] == selected_time)
         color = py.Color("steelblue") if is_active else py.Color("gray40")
-
-        py.draw.rect(screen, py.Color("gray40"), rect, border_radius=6)
+        py.draw.rect(screen, color, rect, border_radius=6)
         text = font.render(label, True, py.Color("white"))
         screen.blit(text, (rect.x + 10, rect.y + 10))
         button_rects.append((label, rect))
