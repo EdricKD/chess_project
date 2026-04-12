@@ -37,6 +37,8 @@ def main():
     p_clicks = [] #Keep track of player clicks
     menu_open = False
     button_rects = []
+    selected_time = None
+    time_options = {"3 min": 180, "5 min": 300, "10 min": 600, "Unlimited": None}
     
     while running:
         for e in py.event.get():
@@ -52,14 +54,17 @@ def main():
                     for label, rect in button_rects:
                         if rect.collidepoint(location):
                             if label == "New Game":
+                                gs = board.Board(score = gs.score)
                                 gs = board.Board()
                                 s_selected = ()
                                 p_clicks = []
                                 pending_promotion = None
                             elif label == "Freestyle":
-                                gs = board.Board(freestyle=True)
+                                gs = board.Board(freestyle = True, score = gs.score)
                                 s_selected = ()
                                 p_clicks = []
+                            elif label in time_options:
+                                selected_time = time_options[label]
                 
 
                 #Only handles board clicks if the menu is closed
@@ -109,7 +114,7 @@ def main():
         VisualGameState(screen, gs, s_selected)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
-        button_rects = draw_panel(screen, gs, menu_open)
+        button_rects = draw_panel(screen, gs, menu_open, selected_time)
         clock.tick(MAX_FPS)
         py.display.flip()
         
@@ -157,7 +162,7 @@ def VisualPieces(screen, board):
                 key = piece.get_image_key()
                 screen.blit(IMAGES[key], py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
 
-def draw_panel(screen, gs, menu_open):
+def draw_panel(screen, gs, menu_open, selected_time):
     panel_rect = py.Rect(WIDTH, 0, PANEL_WIDTH, HEIGHT)
     py.draw.rect(screen, py.Color("gray20"), panel_rect)
 
@@ -172,10 +177,22 @@ def draw_panel(screen, gs, menu_open):
     title = font.render("MENU", True, py.Color("white"))
     screen.blit(title, (WIDTH + 70, 20))
 
+    # score display
+    small = py.font.SysFont("monospace", 12)
+    screen.blit(small.render(f"W: {gs.score['w']}  B: {gs.score['b']}  D: {gs.score['draws']}", 
+                True, py.Color("gray70")), (WIDTH + 15, 35))
+
+    time_options = {"3 min": 180, "5 min": 300, "10 min": 600, "Unlimited": None}
     buttons = ["New Game", "Score", "3 min", "5 min", "10 min", "Unlimited", "Freestyle"]
     button_rects = []
+
     for i, label in enumerate(buttons):
         rect = py.Rect(WIDTH + 20, 60 + i * 55, 160, 40)
+
+        #Highlights active time button
+        is_active = (label in time_options and time_options[label] == selected_time)
+        color = py.Color("steelblue") if is_active else py.Color("gray40")
+
         py.draw.rect(screen, py.Color("gray40"), rect, border_radius=6)
         text = font.render(label, True, py.Color("white"))
         screen.blit(text, (rect.x + 10, rect.y + 10))
