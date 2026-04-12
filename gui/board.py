@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame as py
@@ -8,6 +9,10 @@ from engine import board
 from engine import moves
 from engine import pieces
 
+
+_GUI_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_DIR = os.path.dirname(_GUI_DIR)
+SAVE_PATH = os.path.join(_PROJECT_DIR, "saves", "save.json")
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8
@@ -59,6 +64,65 @@ def b2s(r, c, flipped):
     if flipped:
         return 7 - r, 7 - c
     return r, c
+
+
+def save_game(gs, white_time, black_time, selected_time):
+    """Serialise the current game state and clock times to saves/save.json."""
+    data = gs.to_dict()
+    data['white_time'] = white_time
+    data['black_time'] = black_time
+    data['selected_time'] = selected_time
+    os.makedirs(os.path.dirname(SAVE_PATH), exist_ok=True)
+    with open(SAVE_PATH, 'w') as f:
+        json.dump(data, f)
+
+
+def load_game():
+    """Load a saved game from saves/save.json.
+    Returns (Board, white_time, black_time, selected_time), or None if no save exists."""
+    if not os.path.exists(SAVE_PATH):
+        return None
+    try:
+        with open(SAVE_PATH, 'r') as f:
+            data = json.load(f)
+        gs = board.Board.from_dict(data)
+        return gs, data.get('white_time'), data.get('black_time'), data.get('selected_time')
+    except Exception:
+        return None
+
+
+def draw_move_history(screen, gs):
+    """Render the numbered move list in the sidebar panel when the menu is closed.
+    Scrolls automatically so the most recent moves are always visible."""
+    font = py.font.SysFont("monospace", 11)
+    x_num = WIDTH + 6
+    x_white = WIDTH + 32
+    x_black = WIDTH + 110
+    y_start = 8
+    line_h = 17
+    y_end = HEIGHT - 88
+    max_lines = (y_end - y_start) // line_h
+
+    log = gs.notation_log
+    # Build move-pair lines: [(move_num, white_notation, black_notation), ...]
+    lines = []
+    for i in range(0, len(log), 2):
+        lines.append((i // 2 + 1, log[i], log[i + 1] if i + 1 < len(log) else ""))
+
+    visible = lines[-max_lines:] if len(lines) > max_lines else lines
+    # Absolute index of the last entry in visible within the full lines list
+    offset = len(lines) - len(visible)
+    last_half_idx = len(log) - 1  # index of the most-recent half-move in log
+
+    for j, (num, w, b) in enumerate(visible):
+        y = y_start + j * line_h
+        full_idx = offset + j  # index into lines[]
+        screen.blit(font.render(f"{num}.", True, py.Color("gray55")), (x_num, y))
+        w_col = py.Color("white") if full_idx * 2 == last_half_idx else py.Color("gray75")
+        screen.blit(font.render(w, True, w_col), (x_white, y))
+        if b:
+            b_col = py.Color("white") if full_idx * 2 + 1 == last_half_idx else py.Color("gray75")
+            screen.blit(font.render(b, True, b_col), (x_black, y))
 
 
 def main():
@@ -123,10 +187,20 @@ def main():
                                 game_over = None
                             elif label in time_options:
                                 selected_time = time_options[label]
-                            elif label == "Resign White":
-                                pending_resign = 'w'
-                            elif label == "Resign Black":
-                                pending_resign = 'b'
+                            elif label == "Resign":
+                                pending_resign = 'w' if gs.wtomove else 'b'
+                            elif label == "Save Game":
+                                save_game(gs, white_time, black_time, selected_time)
+                            elif label == "Load Game":
+                                result = load_game()
+                                if result:
+                                    gs, white_time, black_time, selected_time = result
+                                    last_tick = py.time.get_ticks() if white_time is not None else None
+                                    s_selected = ()
+                                    p_clicks = []
+                                    pending_promotion = None
+                                    game_over = None
+                                    menu_open = False
                             elif label == "Confirm Resign" and pending_resign:
                                 gs.score['b' if pending_resign == 'w' else 'w'] += 1
                                 gs = board.Board(score=gs.score)
@@ -221,6 +295,8 @@ def main():
         if game_over is not None:
             draw_game_over(screen, game_over)
         button_rects = draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time, black_time)
+        if not menu_open:
+            draw_move_history(screen, gs)
         clock.tick(MAX_FPS)
         py.display.flip()
 
@@ -366,12 +442,18 @@ def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time,
         return button_rects
 
     time_options = {"3 min": 180, "5 min": 300, "10 min": 600, "Unlimited": None}
-    buttons = ["New Game", "Freestyle", "3 min", "5 min", "10 min", "Unlimited", "Resign White", "Resign Black"]
+    buttons = ["New Game", "Freestyle", "Save Game", "Load Game",
+               "3 min", "5 min", "10 min", "Unlimited", "Resign"]
 
     for i, label in enumerate(buttons):
-        rect = py.Rect(WIDTH + 20, 60 + i * 55, 160, 40)
+        rect = py.Rect(WIDTH + 20, 55 + i * 43, 160, 35)
         is_active = (label in time_options and time_options[label] == selected_time)
-        color = py.Color("steelblue") if is_active else py.Color("gray40")
+        if label == "Resign":
+            color = py.Color("firebrick")
+        elif is_active:
+            color = py.Color("steelblue")
+        else:
+            color = py.Color("gray40")
         py.draw.rect(screen, color, rect, border_radius=6)
         screen.blit(font.render(label, True, py.Color("white")), (rect.x + 10, rect.y + 10))
         button_rects.append((label, rect))

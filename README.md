@@ -36,6 +36,9 @@ chess_project/
     └── Images/          # Piece sprite PNGs (e.g. wP.png, bKN.png)
 ```
 
-## Features
+## Save / Load
 
-See [FEATURES.md](FEATURES.md) for a full list of implemented features.
+Use **Save Game** in the menu to write the current position to `saves/save.json`.  
+Use **Load Game** to restore it (clocks and move history are fully restored).
+
+## Features

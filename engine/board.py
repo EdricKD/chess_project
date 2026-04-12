@@ -9,6 +9,7 @@ class Board():
         self.mlog = []
         self.en_passant_target = None
         self.score = score if score else {'w': 0, 'b': 0, 'draws': 0}
+        self.notation_log = []  # algebraic notation string for every move made
 
     def create_board(self):
         """Return an 8x8 list representing the standard starting position."""
@@ -58,6 +59,7 @@ class Board():
         self.board[move.start_row][move.start_col] = None
         self.board[move.end_row][move.end_col] = move.pmove
         self.mlog.append(move)
+        self.notation_log.append(move.notation)
         self.wtomove = not self.wtomove
 
         # Update en passant target
@@ -96,6 +98,8 @@ class Board():
         and undo castling rook movement and en passant captures."""
         if len(self.mlog) != 0:
             last_move = self.mlog.pop()
+            if self.notation_log:
+                self.notation_log.pop()
             self.board[last_move.start_row][last_move.start_col] = last_move.pmove
             self.board[last_move.end_row][last_move.end_col] = last_move.pcapture
             self.en_passant_target = last_move.prev_en_passant_target
@@ -231,3 +235,46 @@ class Board():
         if ep_square is not None:
             self.board[ep_square[0]][ep_square[1]] = ep_piece
         return in_check
+
+    def to_dict(self) -> dict:
+        """Serialise the full board state to a JSON-compatible dict for saving."""
+        pieces_data = []
+        for r in range(8):
+            for c in range(8):
+                p = self.board[r][c]
+                if p is not None:
+                    pieces_data.append({
+                        'type': type(p).__name__,
+                        'color': p.color,
+                        'row': r,
+                        'col': c,
+                        'moved': p.moved,
+                    })
+        return {
+            'pieces': pieces_data,
+            'wtomove': self.wtomove,
+            'en_passant_target': list(self.en_passant_target) if self.en_passant_target else None,
+            'score': self.score,
+            'notation_log': self.notation_log,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Board':
+        """Reconstruct a Board from a dict produced by to_dict().
+        The move log (for undo) is not restored; only the notation log is."""
+        piece_map = {'Pawn': Pawn, 'Knight': Knight, 'Bishop': Bishop,
+                     'Rook': Rook, 'Queen': Queen, 'King': King}
+        gs = cls.__new__(cls)
+        gs.board = [[None] * 8 for _ in range(8)]
+        gs.wtomove = data['wtomove']
+        ep = data.get('en_passant_target')
+        gs.en_passant_target = tuple(ep) if ep else None
+        gs.score = data['score']
+        gs.mlog = []
+        gs.notation_log = data.get('notation_log', [])
+        for pd in data['pieces']:
+            PClass = piece_map[pd['type']]
+            p = PClass(pd['color'], (pd['row'], pd['col']))
+            p.moved = pd['moved']
+            gs.board[pd['row']][pd['col']] = p
+        return gs

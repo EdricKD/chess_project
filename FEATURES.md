@@ -24,12 +24,22 @@
 - **Valid move highlights**: Clicking a piece shows dots on empty squares it can legally move to, and a red overlay on squares where it can capture.
 - **Selected square highlight**: The currently selected square is tinted green.
 
+## Move History
+
+- **Live move list**: Every move is recorded in algebraic notation and displayed in the sidebar panel as a numbered list (e.g. "1. e4  e5"). The most-recent half-move is highlighted in white.
+- **Auto-scroll**: The list scrolls automatically so the latest moves are always visible.
+
+## Save / Load
+
+- **Save Game**: Writes the full board position, move history, clock times, and score to `saves/save.json`.
+- **Load Game**: Restores a previously saved game including clocks and notation history. The `saves/` directory is created automatically on first save.
+
 ## Side Panel and Menu
 
 - **Score tracking**: Win/loss/draw counts persist across games within the same session.
 - **New Game**: Starts a fresh standard game, carrying over the current score.
 - **Freestyle mode**: Starts a game with randomly shuffled back ranks (Chess960 style) for both players.
-- **Resign**: Either player can resign from the menu. A confirmation step prevents accidental resignations.
+- **Resign**: Either player can resign from the menu (auto-detects whose turn it is). A confirmation step prevents accidental resignations.
 
 ## Chess Clock
 
