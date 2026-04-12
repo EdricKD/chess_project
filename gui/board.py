@@ -11,6 +11,7 @@ from engine import pieces
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8
+PANEL_WIDTH = 200
 S_SIZE = HEIGHT // DIMENSION
 MAX_FPS = 20
 IMAGES = {}
@@ -25,7 +26,7 @@ def images():
 
 def main():
     py.init()
-    screen = py.display.set_mode((WIDTH, HEIGHT))
+    screen = py.display.set_mode((WIDTH + PANEL_WIDTH, HEIGHT))
     clock = py.time.Clock()
     screen.fill(py.Color("white"))
     gs = board.Board()
@@ -34,6 +35,7 @@ def main():
     pending_promotion = None
     s_selected =  () #Keep track of the last square selected
     p_clicks = [] #Keep track of player clicks
+    menu_open = False
     while running:
         for e in py.event.get():
             if e.type == py.QUIT:
@@ -75,10 +77,12 @@ def main():
                     else:
                         s_selected = ()
                         p_clicks = []
-            #key handlers (keyboard)
+            #key handlers (keyboard)         
             elif e.type == py.KEYDOWN:
                 if e.key == py.K_z:
                     gs.undo()
+                elif e.key == py.K_ESCAPE:
+                    menu_open = not menu_open
 
 
         VisualGameState(screen, gs, s_selected)
@@ -86,6 +90,8 @@ def main():
             draw_promotion_panel(screen, pending_promotion[2])
         clock.tick(MAX_FPS)
         py.display.flip()
+        
+        button_rects = draw_panel(screen, gs, menu_open)
 
 def VisualGameState(screen, gs, s_selected):
     VisualBoard(screen)
@@ -129,6 +135,32 @@ def VisualPieces(screen, board):
             if piece is not None:
                 key = piece.get_image_key()
                 screen.blit(IMAGES[key], py.Rect(c*S_SIZE, r*S_SIZE, S_SIZE, S_SIZE))
+
+def draw_panel(screen, gs, menu_open):
+    panel_rect = py.Rect(WIDTH, 0, PANEL_WIDTH, HEIGHT)
+    py.draw.rect(screen, py.Color("gray20"), panel_rect)
+
+    if not menu_open:
+        # just show a small hint
+        font = py.font.SysFont("monospace", 12)
+        hint = font.render("ESC = menu", True, py.Color("gray60"))
+        screen.blit(hint, (WIDTH + 10, HEIGHT - 20))
+        return
+
+    font = py.font.SysFont("monospace", 15)
+    title = font.render("MENU", True, py.Color("white"))
+    screen.blit(title, (WIDTH + 70, 20))
+
+    buttons = ["New Game", "Score", "3 min", "5 min", "10 min", "Unlimited", "Freestyle"]
+    button_rects = []
+    for i, label in enumerate(buttons):
+        rect = py.Rect(WIDTH + 20, 60 + i * 55, 160, 40)
+        py.draw.rect(screen, py.Color("gray40"), rect, border_radius=6)
+        text = font.render(label, True, py.Color("white"))
+        screen.blit(text, (rect.x + 10, rect.y + 10))
+        button_rects.append((label, rect))
+
+    return button_rects
 
 if __name__ == "__main__":
     main()
