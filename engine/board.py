@@ -160,39 +160,28 @@ class Board():
     
     #This is the freestyle method itself
     def create_freestyle_board(self):
-        #Random allows for the sorting of pieces
         import random
         board = [[None]*8 for _ in range(8)]
-        
-        all_pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook,
-                    Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn]
-        
-        # valid rows for pawns — not rank 0 or 7
-        pawn_squares = [(r, c) for r in range(1, 7) for c in range(8)]
-        other_squares = [(r, c) for r in range(8) for c in range(8)]
-        
-        for color in ['w', 'b']:
-            random.shuffle(pawn_squares)
-            random.shuffle(other_squares)
-            
-            pawn_pool = list(pawn_squares)
-            other_pool = [sq for sq in other_squares if sq not in pawn_pool[:8]]
-            
-            placed = 0
-            pawn_count = 0
-            for PieceClass in all_pieces:
-                if PieceClass == Pawn:
-                    pos = pawn_pool[pawn_count]
-                    pawn_count += 1
-                else:
-                    pos = other_pool[placed]
-                    placed += 1
-                while board[pos[0]][pos[1]] is not None:
-                    placed += 1
-                    pos = other_pool[placed]
-                board[pos[0]][pos[1]] = PieceClass(color, pos)
-        
-        return board
-        
 
+        # pawns stay exactly where they are
+        for col in range(8):
+            board[1][col] = Pawn('b', (1, col))
+            board[6][col] = Pawn('w', (6, col))
+
+        # shuffle back rank pieces for both colors
+        back_row = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+        
+        # white back rank
+        white_back = back_row.copy()
+        random.shuffle(white_back)
+        for col, PieceClass in enumerate(white_back):
+            board[7][col] = PieceClass('w', (7, col))
+
+        # black back rank
+        black_back = back_row.copy()
+        random.shuffle(black_back)
+        for col, PieceClass in enumerate(black_back):
+            board[0][col] = PieceClass('b', (0, col))
+
+        return board
 
