@@ -14,12 +14,12 @@ _GUI_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_DIR = os.path.dirname(_GUI_DIR)
 SAVE_PATH = os.path.join(_PROJECT_DIR, "saves", "save.json")
 
-WIDTH = HEIGHT = 512
-DIMENSION = 8
-PANEL_WIDTH = 200
-S_SIZE = HEIGHT // DIMENSION
-MAX_FPS = 20
-IMAGES = {}
+WIDTH = HEIGHT = 512       # board canvas size in pixels
+DIMENSION = 8              # number of ranks / files
+PANEL_WIDTH = 200          # width of the right-hand side panel
+S_SIZE = HEIGHT // DIMENSION  # pixel size of one square
+MAX_FPS = 20               # frame-rate cap
+IMAGES = {}                # populated by images(); keyed by piece code e.g. 'wP'
 
 
 def images():
@@ -134,18 +134,18 @@ def main():
     gs = board.Board()
     images()
     running = True
-    pending_promotion = None
-    s_selected = ()
-    p_clicks = []
-    menu_open = False
-    button_rects = []
-    selected_time = None
+    pending_promotion = None   # (row, col, color) while waiting for promotion choice
+    s_selected = ()            # board square the player clicked first
+    p_clicks = []              # accumulates the two squares of a move attempt
+    menu_open = False          # whether the ESC overlay menu is visible
+    button_rects = []          # (label, Rect) pairs used for menu hit-testing
+    selected_time = None       # clock seconds chosen by the player (None = unlimited)
     time_options = {"3 min": 180, "5 min": 300, "10 min": 600, "Unlimited": None}
-    pending_resign = None
-    white_time = None
-    black_time = None
-    last_tick = None
-    game_over = None  # None, or a result string e.g. "White wins by checkmate!"
+    pending_resign = None      # color ('w'/'b') that has triggered a resign prompt
+    white_time = None          # remaining seconds for white (None until a game starts)
+    black_time = None          # remaining seconds for black
+    last_tick = None           # pygame ticks at the last clock update
+    game_over = None           # None, or a result string e.g. "White wins by checkmate!"
 
     while running:
         for e in py.event.get():
@@ -165,7 +165,7 @@ def main():
                         gs.board[r][c] = chosen(clr, (r, c))
                         pending_promotion = None
 
-                elif menu_open and button_rects:
+                elif menu_open and button_rects:  # menu button click
                     for label, rect in button_rects:
                         if rect.collidepoint(location):
                             if label == "New Game":
@@ -247,6 +247,7 @@ def main():
 
                                 promo_row = 0 if piece.color == 'w' else 7
                                 if isinstance(piece, pieces.Pawn) and destination[0] == promo_row:
+                                    # Pawn reached the back rank — pause for promotion choice
                                     pending_promotion = (destination[0], destination[1], piece.color)
 
                                 # Check for game end after the move
@@ -288,7 +289,7 @@ def main():
                     gs.score['w'] += 1
                     game_over = "White wins on time!"
 
-        flipped = not gs.wtomove
+        flipped = not gs.wtomove  # board is drawn from black's perspective on black's turn
         VisualGameState(screen, gs, s_selected, flipped)
         if pending_promotion is not None:
             draw_promotion_panel(screen, pending_promotion[2])
@@ -404,6 +405,7 @@ def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time,
     button_rects = []
 
     def format_time(seconds):
+        """Return a MM:SS string for a seconds value, or '--:--' for unlimited."""
         if seconds is None:
             return "--:--"
         mins = int(seconds) // 60
@@ -448,6 +450,7 @@ def draw_panel(screen, gs, menu_open, selected_time, pending_resign, white_time,
     for i, label in enumerate(buttons):
         rect = py.Rect(WIDTH + 20, 55 + i * 43, 160, 35)
         is_active = (label in time_options and time_options[label] == selected_time)
+        # Resign is red; the currently selected time control is highlighted blue
         if label == "Resign":
             color = py.Color("firebrick")
         elif is_active:
